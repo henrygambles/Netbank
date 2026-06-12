@@ -7,6 +7,7 @@ import Animated, { FadeInUp, FadeInDown, useAnimatedStyle, useSharedValue, withS
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuthStore } from '../lib/stores/auth'
+import { API_URL } from '../lib/api/url'
 import type { SabrinaStreamEvent } from '@netbank/types'
 
 interface Message {
@@ -16,8 +17,6 @@ interface Message {
   streaming?: boolean
   error?: boolean
 }
-
-const API_URL = __DEV__ ? 'http://localhost:3000' : 'https://api.netbank.com'
 
 const STARTERS = [
   'How much did I spend last month? 💸',

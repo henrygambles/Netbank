@@ -1,8 +1,7 @@
 import axios from 'axios'
+import { API_URL } from './url'
 
-const BASE_URL = __DEV__ ? 'http://localhost:3000' : 'https://api.netbank.com'
-
-export const api = axios.create({ baseURL: BASE_URL })
+export const api = axios.create({ baseURL: API_URL })
 
 api.interceptors.request.use(async config => {
   const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default

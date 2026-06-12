@@ -16,10 +16,7 @@ async function bootstrap() {
   app.use(compression())
 
   app.enableCors({
-    origin: [
-      'http://localhost:3100',
-      'https://app.netbank.com',
-    ],
+    origin: true, // allow all origins in dev; lock down in production
     credentials: true,
   })
 
@@ -43,7 +40,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig)
   SwaggerModule.setup('docs', app, document)
 
-  await app.listen(port)
+  await app.listen(port, '0.0.0.0')
   console.log(`🏦 Netbank API running on port ${port}`)
   console.log(`📚 Swagger docs at http://localhost:${port}/docs`)
 }

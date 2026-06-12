@@ -132,15 +132,14 @@ export default function DashboardPage() {
 
           <QuickActions />
 
-          <SpendingChart insights={displayInsights} />
-
           <PotCards accountId={displayAccounts[0]?.id} demoPots={accounts?.length ? undefined : DEMO_POTS} />
 
           <RecentTransactions transactions={displayTransactions} />
         </div>
 
-        {/* Right column — Sabrina */}
-        <div className="lg:col-span-1">
+        {/* Right column — spending breakdown + Sabrina */}
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          <SpendingChart insights={displayInsights} />
           <SabrinaWidget />
         </div>
       </div>
