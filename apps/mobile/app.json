@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Netbank",
+    "slug": "netbank",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#0d0d1a",
+    "splash": {
+      "backgroundColor": "#0d0d1a",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.netbank.app"
+    },
+    "android": {
+      "package": "com.netbank.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0d0d1a"
+      }
+    },
+    "plugins": []
+  }
+}

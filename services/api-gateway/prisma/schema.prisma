@@ -1,0 +1,339 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & Auth ─────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  firstName   String
+  lastName    String
+  avatarUrl   String?
+  phone       String?  @unique
+  dateOfBirth DateTime?
+  country     String   @default("GB")
+  kycStatus   KYCStatus @default(PENDING)
+  kycLevel    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  authProviders   AuthProvider[]
+  accounts        Account[]
+  cryptoWallets   CryptoWallet[]
+  transactions    Transaction[]
+  cryptoTxs       CryptoTransaction[]
+  notifications   Notification[]
+  sabrinaConvos   SabrinaConversation[]
+  priceAlerts     PriceAlert[]
+  address         UserAddress?
+
+  @@index([email])
+}
+
+enum KYCStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model UserAddress {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  line1       String
+  line2       String?
+  city        String
+  postcode    String
+  country     String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuthProvider {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String   // 'google' | 'apple' | 'email'
+  providerSub  String
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSub])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revoked   Boolean  @default(false)
+
+  @@index([userId])
+  @@index([token])
+}
+
+// ─── Accounts ─────────────────────────────────────────────────────────────────
+
+model Account {
+  id               String      @id @default(cuid())
+  userId           String
+  type             AccountType @default(CURRENT)
+  status           AccountStatus @default(ACTIVE)
+  name             String
+  currency         String      @default("GBP")
+  balance          Decimal     @db.Decimal(20, 8) @default(0)
+  availableBalance Decimal     @db.Decimal(20, 8) @default(0)
+  sortCode         String?
+  accountNumber    String?
+  iban             String?
+  bic              String?
+  color            String      @default("#ff3465")
+  emoji            String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  pots         Pot[]
+
+  @@index([userId])
+}
+
+enum AccountType {
+  CURRENT
+  SAVINGS
+  JOINT
+  BUSINESS
+  VAULT
+}
+
+enum AccountStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+model Pot {
+  id           String   @id @default(cuid())
+  accountId    String
+  name         String
+  balance      Decimal  @db.Decimal(20, 8) @default(0)
+  targetAmount Decimal? @db.Decimal(20, 8)
+  currency     String   @default("GBP")
+  color        String   @default("#ff3465")
+  emoji        String?
+  imageUrl     String?
+  locked       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+}
+
+// ─── Transactions ─────────────────────────────────────────────────────────────
+
+model Transaction {
+  id                     String            @id @default(cuid())
+  accountId              String
+  userId                 String
+  type                   TransactionType
+  status                 TransactionStatus @default(PENDING)
+  direction              Direction
+  amount                 Decimal           @db.Decimal(20, 8)
+  currency               String
+  localAmount            Decimal?          @db.Decimal(20, 8)
+  localCurrency          String?
+  description            String
+  merchantName           String?
+  merchantLogo           String?
+  merchantCategory       String?
+  merchantCategoryCode   String?
+  notes                  String?
+  tags                   String[]
+  receiptUrl             String?
+  counterpartyName       String?
+  counterpartyAccountNum String?
+  counterpartySortCode   String?
+  metadata               Json?
+  createdAt              DateTime          @default(now())
+  settledAt              DateTime?
+
+  account Account @relation(fields: [accountId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([createdAt])
+}
+
+enum TransactionType {
+  PAYMENT
+  TRANSFER
+  TOPUP
+  WITHDRAWAL
+  REFUND
+  FEE
+  INTEREST
+  CRYPTO_BUY
+  CRYPTO_SELL
+  CRYPTO_RECEIVE
+  CRYPTO_SEND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+enum Direction {
+  INBOUND
+  OUTBOUND
+}
+
+// ─── Crypto ───────────────────────────────────────────────────────────────────
+
+model CryptoWallet {
+  id             String   @id @default(cuid())
+  userId         String
+  currency       String
+  network        String
+  address        String
+  encryptedKey   String
+  encryptedSeed  String?
+  derivationPath String?
+  balance        Decimal  @db.Decimal(30, 18) @default(0)
+  label          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  txs    CryptoTransaction[]
+
+  @@unique([userId, currency, network])
+  @@index([userId])
+  @@index([address])
+}
+
+model CryptoTransaction {
+  id                    String                @id @default(cuid())
+  walletId              String
+  userId                String
+  type                  CryptoTxType
+  status                CryptoTxStatus        @default(PENDING)
+  amount                Decimal               @db.Decimal(30, 18)
+  currency              String
+  fiatAmount            Decimal               @db.Decimal(20, 8)
+  fiatCurrency          String
+  fee                   Decimal               @db.Decimal(30, 18) @default(0)
+  feeCurrency           String
+  txHash                String?               @unique
+  fromAddress           String?
+  toAddress             String?
+  confirmations         Int                   @default(0)
+  requiredConfirmations Int                   @default(6)
+  blockHeight           Int?
+  network               String
+  notes                 String?
+  createdAt             DateTime              @default(now())
+  confirmedAt           DateTime?
+
+  wallet CryptoWallet @relation(fields: [walletId], references: [id])
+  user   User         @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([walletId])
+  @@index([txHash])
+}
+
+enum CryptoTxType {
+  SEND
+  RECEIVE
+  SWAP
+  BUY
+  SELL
+}
+
+enum CryptoTxStatus {
+  PENDING
+  CONFIRMING
+  CONFIRMED
+  FAILED
+}
+
+// ─── Price Alerts ─────────────────────────────────────────────────────────────
+
+model PriceAlert {
+  id        String       @id @default(cuid())
+  userId    String
+  currency  String
+  condition AlertCondition
+  price     Decimal      @db.Decimal(20, 8)
+  triggered Boolean      @default(false)
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum AlertCondition {
+  ABOVE
+  BELOW
+}
+
+// ─── AI Assistant ─────────────────────────────────────────────────────────────
+
+model SabrinaConversation {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String           @default("New conversation")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages SabrinaMessage[]
+
+  @@index([userId])
+}
+
+model SabrinaMessage {
+  id             String    @id @default(cuid())
+  conversationId String
+  role           String
+  content        String    @db.Text
+  toolCalls      Json?
+  createdAt      DateTime  @default(now())
+
+  conversation SabrinaConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  data      Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+}
