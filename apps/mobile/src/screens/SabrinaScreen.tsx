@@ -58,6 +58,35 @@ function parseContent(content: string): ContentPart[] {
   return parts
 }
 
+// ── Inline markdown (bold / italic) ──────────────────────────────────────────
+
+type InlineSegment = { text: string; bold?: boolean; italic?: boolean }
+
+function parseInlineMarkdown(text: string): InlineSegment[] {
+  const segments: InlineSegment[] = []
+  const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ text: text.slice(lastIndex, match.index) })
+    }
+    if (match[1] !== undefined) {
+      segments.push({ text: match[1], bold: true })
+    } else if (match[2] !== undefined) {
+      segments.push({ text: match[2], italic: true })
+    }
+    lastIndex = regex.lastIndex
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({ text: text.slice(lastIndex) })
+  }
+
+  return segments
+}
+
 // ── YouTube card ──────────────────────────────────────────────────────────────
 
 function YouTubeCard({ videoId }: { videoId: string }) {
@@ -128,7 +157,14 @@ function BubbleContent({ item }: { item: ChatMessage }) {
         if (!trimmed && !hasMedia) return null
         return (
           <Text key={i} style={[styles.messageText, textStyle]}>
-            {part.text}
+            {parseInlineMarkdown(part.text).map((seg, j) => (
+              <Text
+                key={j}
+                style={[seg.bold && styles.boldText, seg.italic && styles.italicText]}
+              >
+                {seg.text}
+              </Text>
+            ))}
           </Text>
         )
       })}
@@ -606,7 +642,7 @@ const styles = StyleSheet.create({
   assistantRow: { justifyContent: 'flex-start' },
   assistantAvatar: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#ff346515', borderWidth: 1, borderColor: '#ff346330', alignItems: 'center', justifyContent: 'center', marginBottom: 2, flexShrink: 0 },
   errorAvatar: { backgroundColor: '#ff346560' },
-  bubble: { maxWidth: '85%', borderRadius: 18, padding: 13, overflow: 'hidden' },
+  bubble: { maxWidth: '85%', flexShrink: 1, borderRadius: 18, padding: 13, overflow: 'hidden' },
   userBubble: { backgroundColor: '#ff3465', borderBottomRightRadius: 4 },
   assistantBubble: { backgroundColor: '#fff', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#e2e6f0' },
   errorBubble: { backgroundColor: '#fff5f7', borderColor: '#ffb3c1', padding: 0 },
@@ -616,10 +652,12 @@ const styles = StyleSheet.create({
   messageText: { fontSize: 15, lineHeight: 22 },
   userText: { color: '#fff' },
   assistantText: { color: '#111827' },
+  boldText: { fontWeight: '700' },
+  italicText: { fontStyle: 'italic' },
   typingDots: { opacity: 0.4 },
   streamingDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ff3465', marginTop: 6, opacity: 0.7 },
   // YouTube card
-  youtubeCard: { width: 260, borderRadius: 12, overflow: 'hidden', marginVertical: 6, backgroundColor: '#000' },
+  youtubeCard: { width: 260, alignSelf: 'center', borderRadius: 12, overflow: 'hidden', marginVertical: 6, backgroundColor: '#000' },
   youtubeThumbnailWrap: { width: 260, height: 146, position: 'relative' },
   youtubeThumbnail: { width: 260, height: 146 },
   youtubePlayOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
@@ -629,8 +667,8 @@ const styles = StyleSheet.create({
   youtubeYTLogo: { color: '#ff0000', fontSize: 12, fontWeight: '700' },
   youtubeTapHint: { color: 'rgba(255,255,255,0.4)', fontSize: 11 },
   // Images
-  attachedImage: { width: 220, height: 160, borderRadius: 10, marginBottom: 8 },
-  generatedImage: { width: 240, height: 180, borderRadius: 12, marginVertical: 6 },
+  attachedImage: { width: 220, height: 160, alignSelf: 'center', borderRadius: 10, marginBottom: 8 },
+  generatedImage: { width: 240, height: 180, alignSelf: 'center', borderRadius: 12, marginVertical: 6 },
   // Pending image preview strip
   pendingImageRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f2f8' },
   pendingImageThumb: { width: 44, height: 44, borderRadius: 8, backgroundColor: '#f0f2f8' },

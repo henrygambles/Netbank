@@ -2,6 +2,8 @@
 
 <br />
 
+<table align="center"><tr><td>
+
 ```
  ███╗   ██╗███████╗████████╗██████╗  █████╗ ███╗   ██╗██╗  ██╗
  ████╗  ██║██╔════╝╚══██╔══╝██╔══██╗██╔══██╗████╗  ██║██║ ██╔╝
@@ -10,6 +12,8 @@
  ██║ ╚████║███████╗   ██║   ██████╔╝██║  ██║██║ ╚████║██║  ██╗
  ╚═╝  ╚═══╝╚══════╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
 ```
+
+</td></tr></table>
 
 ### Banking built for humans. Not spreadsheets. 🌅
 
@@ -23,6 +27,10 @@
 [![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=flat-square&logo=expo&logoColor=white)](https://expo.dev/)
 [![Turborepo](https://img.shields.io/badge/Turborepo-monorepo-ef4444?style=flat-square&logo=turborepo&logoColor=white)](https://turbo.build/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-ff3465?style=flat-square)](LICENSE)
+
+<br />
+
+<img src="screenshots/hero.png" alt="Netbank web and mobile app screenshots" width="800" />
 
 <br />
 
@@ -202,7 +210,7 @@ Built as a **Turborepo monorepo** with `pnpm` workspaces. All packages share typ
 ### 1. Clone & install
 
 ```bash
-git clone https://github.com/your-username/netbank.git
+git clone https://github.com/henrygambles/netbank.git
 cd netbank
 pnpm install
 ```

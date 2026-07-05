@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, FlatList, TextInput, StyleSheet, TouchableOpacity,
-  RefreshControl,
+  RefreshControl, ScrollView,
 } from 'react-native'
 import Animated, { FadeInRight, FadeInDown } from 'react-native-reanimated'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -193,14 +193,15 @@ export function TransactionsScreen() {
       ))}
 
       {/* Category pills */}
-      <FlatList
-        data={CATEGORIES}
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        keyExtractor={i => i}
+        style={styles.pillsScroll}
         contentContainerStyle={styles.pills}
-        renderItem={({ item }) => (
+      >
+        {CATEGORIES.map(item => (
           <TouchableOpacity
+            key={item}
             onPress={() => setSelectedCategory(item)}
             style={[styles.pill, {
               backgroundColor: selectedCategory === item ? '#ff3465' : c.surface,
@@ -209,8 +210,8 @@ export function TransactionsScreen() {
           >
             <Text style={[styles.pillText, { color: selectedCategory === item ? '#fff' : c.textSub }]}>{item}</Text>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </ScrollView>
 
       {/* No connections state */}
       {!hasConnections && (
@@ -305,7 +306,8 @@ const styles = StyleSheet.create({
   searchIcon: { fontSize: 16 },
   searchInput: { flex: 1, fontSize: 15 },
   clearIcon: { fontSize: 14, paddingHorizontal: 4 },
-  pills: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  pillsScroll: { flexGrow: 0 },
+  pills: { paddingHorizontal: 16, paddingVertical: 10, gap: 8, alignItems: 'center' },
   pill: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   pillText: { fontSize: 13, fontWeight: '600' },
   list: { padding: 16, gap: 4 },
