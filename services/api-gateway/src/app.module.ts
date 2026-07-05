@@ -9,6 +9,7 @@ import { CryptoModule } from './crypto/crypto.module'
 import { SabrinaModule } from './sabrina/sabrina.module'
 import { NotificationsModule } from './notifications/notifications.module'
 import { UsersModule } from './users/users.module'
+import { OpenBankingModule } from './open-banking/open-banking.module'
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UsersModule } from './users/users.module'
     CryptoModule,
     SabrinaModule,
     NotificationsModule,
+    OpenBankingModule,
   ],
 })
 export class AppModule {}

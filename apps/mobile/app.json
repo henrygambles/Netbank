@@ -12,7 +12,12 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.netbank.app"
+      "bundleIdentifier": "com.netbank.app",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
     },
     "android": {
       "package": "com.netbank.app",
@@ -20,6 +25,15 @@
         "backgroundColor": "#0d0d1a"
       }
     },
-    "plugins": []
+    "scheme": "netbank",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Netbank needs access to your photos so you can share images with Sabrina.",
+          "cameraPermission": "Netbank needs camera access so you can take photos to share with Sabrina."
+        }
+      ]
+    ]
   }
 }

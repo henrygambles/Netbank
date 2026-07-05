@@ -11,7 +11,9 @@
  ╚═╝  ╚═══╝╚══════╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
 ```
 
-### Banking built for humans. Not spreadsheets.
+### Banking built for humans. Not spreadsheets. 🌅
+
+### The future of money is open, kind, and closer than you think. ✨
 
 <br />
 
@@ -32,7 +34,9 @@
 
 Netbank is a **full-stack digital banking platform** — beautiful on the surface, serious underneath. It combines a Next.js web app, a React Native mobile app, and a NestJS microservices backend into a single, cohesive monorepo. Every screen has been crafted with care. Every API has been designed to last.
 
-It's what banking *should* feel like.
+We believe banking is entering its best decade yet. 🚀 Open banking means your money is finally *yours* to move, connect, and understand — not locked behind one institution's walls. AI means a real financial companion in your pocket, not just a ledger. Community finance means the person next to you can be your portfolio, not a stranger's fund.
+
+Netbank is our bet on what that future looks like, built today.
 
 <br />
 
@@ -102,6 +106,12 @@ It's what banking *should* feel like.
 - **Instant transactions** with merchant categorisation and spend insights
 - **Savings pots** — give your money a purpose, not just a number
 - **Dark mode** that actually looks good
+
+### 🔗 Open Banking — your whole financial life, one place
+- **Connect any bank** via Plaid — no more twelve different apps
+- Secure OAuth-based linking, your credentials never touch our servers
+- Unified transaction feed across every account you connect
+- The walled garden is coming down, one connection at a time 🌱
 
 ### ♥ Invest — Love thy neighbour
 - **Community micro-investing** — put your money directly behind real people in your neighbourhood
@@ -364,14 +374,16 @@ Every profile is real. Every story is verified. Every penny is traceable.
 
 ## 🗺️ Roadmap
 
+- [x] Open Banking — connect any bank via Plaid ✅
 - [ ] Apple Pay & Google Pay
-- [ ] Open Banking (PSD2) integration
 - [ ] Instant UK bank transfers (Faster Payments)
 - [ ] Scheduled payments & standing orders
 - [ ] Sabrina proactive nudges (*"You're about to go over budget on dining"*)
 - [ ] Community investing — live repayment tracking
 - [ ] Web3 — on-chain community funding pools
 - [ ] Spend abroad with real exchange rates
+
+The best part? This is still early. Every checkbox above is a step toward banking that's faster, kinder, and more human than what came before — and we're just getting started. 🌍💛
 
 <br />
 
@@ -387,8 +399,10 @@ MIT © Netbank
 
 <div align="center">
 
-Made with ✦ and a lot of late nights.
+Made with ✦ and a lot of late nights — and a genuine belief that money can move with more heart.
 
 *Banking built for humans. Not spreadsheets.*
+
+**The future is open. Let's build it together.** 🚀🏦✨
 
 </div>

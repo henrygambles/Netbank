@@ -15,7 +15,7 @@ export class SabrinaController {
   async chat(
     @Req() req: any,
     @Res() res: Response,
-    @Body() body: { message: string; conversationId?: string },
+    @Body() body: { message: string; conversationId?: string; images?: string[] },
   ) {
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
@@ -24,7 +24,7 @@ export class SabrinaController {
     res.flushHeaders()
 
     try {
-      for await (const event of this.sabrina.chat(req.user.id, body.message, body.conversationId)) {
+      for await (const event of this.sabrina.chat(req.user.id, body.message, body.conversationId, body.images)) {
         if (!res.writableEnded) {
           res.write(`data: ${JSON.stringify(event)}\n\n`)
         }
@@ -32,7 +32,6 @@ export class SabrinaController {
     } catch (err: any) {
       if (!res.writableEnded) {
         let message: string = err?.message ?? 'Something went wrong'
-        // Extract the human-readable message from Anthropic's nested JSON error string
         try {
           const jsonMatch = message.match(/\{.*\}/)
           if (jsonMatch) {
@@ -50,5 +49,10 @@ export class SabrinaController {
   @Get('conversations')
   getConversations(@Req() req: any) {
     return this.sabrina.getConversations(req.user.id)
+  }
+
+  @Get('conversations/:id')
+  getConversation(@Req() req: any, @Param('id') id: string) {
+    return this.sabrina.getConversation(req.user.id, id)
   }
 }

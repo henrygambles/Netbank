@@ -32,6 +32,7 @@ model User {
   sabrinaConvos   SabrinaConversation[]
   priceAlerts     PriceAlert[]
   address         UserAddress?
+  obConnections   OpenBankingConnection[]
 
   @@index([email])
 }
@@ -318,6 +319,76 @@ model SabrinaMessage {
   conversation SabrinaConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
+}
+
+// ─── Open Banking ─────────────────────────────────────────────────────────────
+
+enum OBConnectionStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+model OpenBankingConnection {
+  id              String             @id @default(cuid())
+  userId          String
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId          String             // Plaid item_id
+  institutionId   String
+  institutionName String
+  accessToken     String             @db.Text
+  status          OBConnectionStatus @default(ACTIVE)
+  cursor          String?            // Plaid transactions sync cursor
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  accounts OpenBankingAccount[]
+
+  @@unique([userId, itemId])
+  @@index([userId])
+}
+
+model OpenBankingAccount {
+  id            String                @id @default(cuid())
+  connectionId  String
+  connection    OpenBankingConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  userId        String
+  externalId    String
+  accountType   String
+  subtype       String?
+  displayName   String
+  currency      String                @default("GBP")
+  balance       Decimal?              @db.Decimal(20, 8)
+  creditLimit   Decimal?              @db.Decimal(20, 8)
+  providerName  String?
+  syncedAt      DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  transactions OpenBankingTransaction[]
+
+  @@unique([connectionId, externalId])
+  @@index([userId])
+}
+
+model OpenBankingTransaction {
+  id            String             @id @default(cuid())
+  accountId     String
+  account       OpenBankingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  userId        String
+  externalId    String             @unique
+  timestamp     DateTime
+  description   String             @db.Text
+  amount        Decimal            @db.Decimal(20, 8)
+  currency      String             @default("GBP")
+  merchantName  String?
+  category      String?
+  categoryEmoji String?
+  createdAt     DateTime           @default(now())
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([timestamp])
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────

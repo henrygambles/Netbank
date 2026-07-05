@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import Anthropic from '@anthropic-ai/sdk'
 import { PrismaService } from '../prisma/prisma.service'
 import { PriceService } from '../crypto/price.service'
+import { OpenBankingService } from '../open-banking/open-banking.service'
 import type { SabrinaStreamEvent, CryptoCurrency } from '@netbank/types'
 
 @Injectable()
@@ -61,11 +62,33 @@ export class SabrinaService {
     },
     {
       name: 'search_web',
-      description: 'Search the web for financial news, rates, or information',
+      description: 'Search the web for financial news, music recommendations, rates, or any information. Use this to find current facts.',
       input_schema: {
         type: 'object',
-        properties: { query: { type: 'string' } },
+        properties: { query: { type: 'string', description: 'The search query' } },
         required: ['query'],
+      },
+    },
+    {
+      name: 'search_youtube',
+      description: 'Search YouTube for music videos, songs, playlists, or any video content. Returns video IDs to embed inline in chat.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'e.g. "Taylor Swift Anti-Hero official video" or "lofi hip hop playlist"' },
+        },
+        required: ['query'],
+      },
+    },
+    {
+      name: 'generate_image',
+      description: 'Generate an image from a text description using AI. Use for creating visual content, illustrations, or anything the user asks to see.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', description: 'Detailed description of the image to generate' },
+        },
+        required: ['prompt'],
       },
     },
     {
@@ -73,17 +96,40 @@ export class SabrinaService {
       description: 'Get all savings pots and their progress toward goals',
       input_schema: { type: 'object', properties: {} },
     },
+    {
+      name: 'get_open_banking_accounts',
+      description: 'Get all connected bank accounts via Open Banking (Plaid) including current accounts, savings, and credit cards with their balances',
+      input_schema: { type: 'object', properties: {} },
+    },
+    {
+      name: 'get_open_banking_transactions',
+      description: 'Get real bank transactions from connected Open Banking accounts, with merchant names, categories, and amounts',
+      input_schema: {
+        type: 'object',
+        properties: {
+          limit: { type: 'number', description: 'Number of transactions to return (default 50)', default: 50 },
+          category: { type: 'string', description: 'Filter by category e.g. Groceries, Transport, Eating Out' },
+          search: { type: 'string', description: 'Search by merchant name' },
+        },
+      },
+    },
   ]
 
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
     private prices: PriceService,
+    private openBanking: OpenBankingService,
   ) {
     this.client = new Anthropic({ apiKey: this.config.getOrThrow('ANTHROPIC_API_KEY') })
   }
 
-  async *chat(userId: string, message: string, conversationId?: string): AsyncGenerator<SabrinaStreamEvent> {
+  async *chat(
+    userId: string,
+    message: string,
+    conversationId?: string,
+    images?: string[],
+  ): AsyncGenerator<SabrinaStreamEvent> {
     let convo = conversationId
       ? await this.prisma.sabrinaConversation.findFirst({
           where: { id: conversationId, userId },
@@ -109,9 +155,30 @@ export class SabrinaService {
       content: m.content,
     }))
 
+    // Build user content — text only, or text + images for vision
+    const userContent: Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam> = []
+
+    if (images && images.length > 0) {
+      for (const img of images) {
+        const match = img.match(/^data:([^;]+);base64,(.+)$/)
+        if (match) {
+          userContent.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: match[1] as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+              data: match[2],
+            },
+          })
+        }
+      }
+    }
+
+    userContent.push({ type: 'text', text: message })
+
     const messages: Anthropic.MessageParam[] = [
       ...history,
-      { role: 'user', content: message },
+      { role: 'user', content: userContent.length === 1 ? message : userContent },
     ]
 
     let fullResponse = ''
@@ -175,6 +242,13 @@ export class SabrinaService {
     })
   }
 
+  async getConversation(userId: string, conversationId: string) {
+    return this.prisma.sabrinaConversation.findFirst({
+      where: { id: conversationId, userId },
+      include: { messages: { orderBy: { createdAt: 'asc' } } },
+    })
+  }
+
   private async executeTool(userId: string, name: string, input: Record<string, unknown>) {
     switch (name) {
       case 'get_account_balance': {
@@ -214,12 +288,127 @@ export class SabrinaService {
         return this.prices.getPrice(currency)
       }
       case 'search_web': {
-        // In production: integrate with Brave Search or Tavily API
-        return { message: `Web search for "${input.query}" — connect a search API key to enable live results.` }
+        const apiKey = this.config.get('BRAVE_SEARCH_API_KEY')
+        if (!apiKey) {
+          return { error: 'Web search not configured — add BRAVE_SEARCH_API_KEY to enable live results.' }
+        }
+        try {
+          const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(input.query as string)}&count=6`
+          const res = await fetch(url, {
+            headers: {
+              'X-Subscription-Token': apiKey,
+              'Accept': 'application/json',
+              'Accept-Encoding': 'gzip',
+            },
+          })
+          if (!res.ok) return { error: `Search failed: HTTP ${res.status}` }
+          const data = await res.json() as any
+          return (data.web?.results ?? []).map((r: any) => ({
+            title: r.title,
+            url: r.url,
+            description: r.description,
+          }))
+        } catch (err: any) {
+          return { error: `Search error: ${err.message}` }
+        }
+      }
+      case 'search_youtube': {
+        const apiKey = this.config.get('BRAVE_SEARCH_API_KEY')
+        if (!apiKey) {
+          return { error: 'YouTube search not configured — add BRAVE_SEARCH_API_KEY to enable video search.' }
+        }
+        try {
+          // Try Brave video search first, fall back to web search scoped to YouTube
+          const videoUrl = `https://api.search.brave.com/res/v1/videos/search?q=${encodeURIComponent(input.query as string)}&count=5`
+          const res = await fetch(videoUrl, {
+            headers: {
+              'X-Subscription-Token': apiKey,
+              'Accept': 'application/json',
+              'Accept-Encoding': 'gzip',
+            },
+          })
+
+          let results: Array<{ title: string; videoId: string; url: string; thumbnail?: string }> = []
+
+          if (res.ok) {
+            const data = await res.json() as any
+            results = (data.results ?? [])
+              .map((r: any) => {
+                const idMatch = (r.url ?? '').match(/[?&]v=([a-zA-Z0-9_-]{11})/) ?? (r.url ?? '').match(/youtu\.be\/([a-zA-Z0-9_-]{11})/)
+                return { title: r.title, videoId: idMatch?.[1] ?? null, url: r.url, thumbnail: r.thumbnail?.src }
+              })
+              .filter((r: any) => r.videoId)
+          }
+
+          // Fall back: web search scoped to youtube.com
+          if (results.length === 0) {
+            const webUrl = `https://api.search.brave.com/res/v1/web/search?q=site:youtube.com+${encodeURIComponent(input.query as string)}&count=6`
+            const webRes = await fetch(webUrl, {
+              headers: {
+                'X-Subscription-Token': apiKey,
+                'Accept': 'application/json',
+                'Accept-Encoding': 'gzip',
+              },
+            })
+            if (webRes.ok) {
+              const data = await webRes.json() as any
+              results = (data.web?.results ?? [])
+                .map((r: any) => {
+                  const idMatch = (r.url ?? '').match(/[?&]v=([a-zA-Z0-9_-]{11})/) ?? (r.url ?? '').match(/youtu\.be\/([a-zA-Z0-9_-]{11})/)
+                  return { title: r.title, videoId: idMatch?.[1] ?? null, url: r.url }
+                })
+                .filter((r: any) => r.videoId)
+            }
+          }
+
+          return results.slice(0, 5)
+        } catch (err: any) {
+          return { error: `YouTube search error: ${err.message}` }
+        }
+      }
+      case 'generate_image': {
+        const falKey = this.config.get('FAL_API_KEY')
+        if (!falKey) {
+          return { error: 'Image generation not configured — add FAL_API_KEY to enable AI image generation.' }
+        }
+        try {
+          const res = await fetch('https://fal.run/fal-ai/flux/schnell', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Key ${falKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              prompt: input.prompt as string,
+              num_images: 1,
+              image_size: 'landscape_4_3',
+              num_inference_steps: 4,
+            }),
+          })
+          if (!res.ok) {
+            const body = await res.text()
+            return { error: `Image generation failed: HTTP ${res.status} — ${body.slice(0, 200)}` }
+          }
+          const data = await res.json() as any
+          const imageUrl = data.images?.[0]?.url
+          if (!imageUrl) return { error: 'No image returned by generation service' }
+          return { imageUrl, prompt: input.prompt }
+        } catch (err: any) {
+          return { error: `Image generation error: ${err.message}` }
+        }
       }
       case 'get_savings_pots': {
         const accounts = await this.prisma.account.findMany({ where: { userId }, include: { pots: true } })
         return accounts.flatMap(a => a.pots)
+      }
+      case 'get_open_banking_accounts': {
+        return this.openBanking.getAccountsSummaryForSabrina(userId)
+      }
+      case 'get_open_banking_transactions': {
+        return this.openBanking.getTransactionsSummaryForSabrina(
+          userId,
+          (input.limit as number) ?? 50,
+        )
       }
       default:
         return { error: `Unknown tool: ${name}` }
@@ -238,8 +427,21 @@ Your personality:
 
 Your capabilities:
 - Full read access to the user's accounts, transactions, and crypto portfolio via tools
-- Ability to search the web for current rates, news, and financial information
+- Real web search for current rates, news, financial information, and music recommendations
+- YouTube video search and inline embedding (embed with [youtube:VIDEO_ID])
+- AI image generation via generate_image tool (embed result with [image:URL])
+- Vision — you can see images the user shares with you
 - Deep knowledge of personal finance, investing, crypto, and tax (UK-focused)
+
+Embedding media in your responses:
+- YouTube videos: Use [youtube:VIDEO_ID] to embed a video inline. Example: [youtube:dQw4w9WgXcQ]
+- Generated images: After calling generate_image, embed the result with [image:URL]. Example: [image:https://cdn.fal.ai/...]
+- Always add a short sentence before or after each embed so the user has context.
+- Only embed media when it genuinely adds value — don't spam embeds.
+
+Music & entertainment:
+- When users ask for music recommendations, search YouTube and embed the top result(s)
+- Be enthusiastic and specific — mention genre, vibe, why you chose it
 
 What you never do:
 - Make transactions or move money without explicit confirmation
