@@ -414,3 +414,7 @@ Made with ✦ and a lot of late nights — and a genuine belief that money can m
 **The future is open. Let's build it together.** 🚀🏦✨
 
 </div>
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=henrygambles/Netbank&type=Date)](https://star-history.com/#henrygambles/Netbank&Date)
